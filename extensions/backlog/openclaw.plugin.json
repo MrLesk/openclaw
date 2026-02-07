@@ -1,0 +1,11 @@
+{
+  "id": "backlog",
+  "name": "Backlog.md",
+  "description": "Backlog.md integration extension for OpenClaw.",
+  "skills": ["./skills"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@openclaw/backlog",
+  "version": "2026.2.4",
+  "description": "OpenClaw Backlog.md extension package",
+  "type": "module",
+  "devDependencies": {
+    "openclaw": "workspace:*"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
