@@ -14,6 +14,8 @@ const OPERATION_PREFIXES = {
   view: ["task", "view"],
   edit: ["task", "edit"],
   archive: ["task", "archive"],
+  config: ["config", "list"],
+  init: ["init"],
 } as const;
 
 export type BacklogTaskOperation = keyof typeof OPERATION_PREFIXES;
@@ -174,20 +176,24 @@ function buildCommandContext(params: {
   operation: BacklogTaskOperation;
   command: string[];
   workspaceDir?: string;
-  root: BacklogRootResolution;
+  root: BacklogRootResolution | null;
+  startDir: string;
   timeoutMs: number;
 }): BacklogCommandContext {
   return {
     operation: params.operation,
     command: params.command,
     workspaceDir: params.workspaceDir,
-    startDir: params.root.startDir,
-    rootDir: params.root.rootDir,
+    startDir: params.startDir,
+    rootDir: params.root?.rootDir ?? params.startDir,
     timeoutMs: params.timeoutMs,
   };
 }
 
-export function buildBacklogCommand(operation: BacklogTaskOperation, args: string[] = []): string[] {
+export function buildBacklogCommand(
+  operation: BacklogTaskOperation,
+  args: string[] = [],
+): string[] {
   return ["backlog", ...OPERATION_PREFIXES[operation], ...args];
 }
 
@@ -207,7 +213,7 @@ export async function executeBacklogTaskOperation(
   });
   const command = buildBacklogCommand(params.operation, args);
 
-  if (!root) {
+  if (!root && params.operation !== "init") {
     return buildNotInitializedFailure({
       operation: params.operation,
       command,
@@ -222,12 +228,14 @@ export async function executeBacklogTaskOperation(
     command,
     workspaceDir: params.workspaceDir,
     root,
+    startDir: root?.startDir ?? searchStartDir,
     timeoutMs,
   });
 
   try {
+    const commandCwd = root?.rootDir ?? searchStartDir;
     const result = await params.runCommandWithTimeout(command, {
-      cwd: root.rootDir,
+      cwd: commandCwd,
       timeoutMs,
     });
 
@@ -250,8 +258,8 @@ export async function executeBacklogTaskOperation(
         operation: params.operation,
         command,
         workspaceDir: params.workspaceDir,
-        startDir: root.startDir,
-        rootDir: root.rootDir,
+        startDir: root?.startDir ?? searchStartDir,
+        rootDir: root?.rootDir,
         timeoutMs,
         stderr: result.stderr,
         stdout: result.stdout,
@@ -278,8 +286,8 @@ export async function executeBacklogTaskOperation(
         operation: params.operation,
         command,
         workspaceDir: params.workspaceDir,
-        startDir: root.startDir,
-        rootDir: root.rootDir,
+        startDir: root?.startDir ?? searchStartDir,
+        rootDir: root?.rootDir,
         timeoutMs,
         cause: formatError(err),
       });
