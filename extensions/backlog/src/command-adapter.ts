@@ -202,18 +202,21 @@ export async function executeBacklogTaskOperation(
 ): Promise<BacklogCommandResult> {
   const timeoutMs = params.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const args = params.args ?? [];
+  const isInitOperation = params.operation === "init";
   const searchStartDir = resolveBacklogSearchStartDir({
     workspaceDir: params.workspaceDir,
     cwd: params.cwd,
   });
   const resolveRoot = params.rootResolver ?? resolveBacklogRoot;
-  const root = await resolveRoot({
-    workspaceDir: params.workspaceDir,
-    cwd: params.cwd,
-  });
+  const root = isInitOperation
+    ? null
+    : await resolveRoot({
+        workspaceDir: params.workspaceDir,
+        cwd: params.cwd,
+      });
   const command = buildBacklogCommand(params.operation, args);
 
-  if (!root && params.operation !== "init") {
+  if (!root && !isInitOperation) {
     return buildNotInitializedFailure({
       operation: params.operation,
       command,
@@ -234,6 +237,27 @@ export async function executeBacklogTaskOperation(
 
   try {
     const commandCwd = root?.rootDir ?? searchStartDir;
+    if (isInitOperation) {
+      const gitInit = await params.runCommandWithTimeout(["git", "init"], {
+        cwd: commandCwd,
+        timeoutMs,
+      });
+      if (gitInit.code !== 0) {
+        return {
+          ok: false,
+          code: "command_failed",
+          message: `git init failed with exit code ${String(gitInit.code)}.`,
+          guidance: [
+            "Ensure git is installed and available on PATH for this OpenClaw runtime.",
+            "Run `git init` manually in the workspace and retry Backlog.md initialization.",
+          ],
+          context,
+          exitCode: gitInit.code,
+          stdout: gitInit.stdout,
+          stderr: gitInit.stderr,
+        };
+      }
+    }
     const result = await params.runCommandWithTimeout(command, {
       cwd: commandCwd,
       timeoutMs,

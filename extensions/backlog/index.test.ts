@@ -114,13 +114,22 @@ describe("backlog plugin gateway methods", () => {
         respond: (ok: boolean, payload?: unknown) => void;
       }) => Promise<void>
     >();
-    const runCommandWithTimeout = vi.fn().mockResolvedValueOnce({
-      stdout: "Initialized backlog project: Roadmap\n",
-      stderr: "",
-      code: 0,
-      signal: null,
-      killed: false,
-    });
+    const runCommandWithTimeout = vi
+      .fn()
+      .mockResolvedValueOnce({
+        stdout: "Initialized empty Git repository in /tmp/workspace/.git/\n",
+        stderr: "",
+        code: 0,
+        signal: null,
+        killed: false,
+      })
+      .mockResolvedValueOnce({
+        stdout: "Initialized backlog project: Roadmap\n",
+        stderr: "",
+        code: 0,
+        signal: null,
+        killed: false,
+      });
 
     register({
       id: "backlog",
@@ -171,7 +180,12 @@ describe("backlog plugin gateway methods", () => {
       respond,
     });
 
-    expect(runCommandWithTimeout).toHaveBeenCalledWith(
+    expect(runCommandWithTimeout).toHaveBeenNthCalledWith(1, ["git", "init"], {
+      cwd: "/tmp/workspace",
+      timeoutMs: 30000,
+    });
+    expect(runCommandWithTimeout).toHaveBeenNthCalledWith(
+      2,
       [
         "backlog",
         "init",
@@ -201,6 +215,88 @@ describe("backlog plugin gateway methods", () => {
       expect.objectContaining({
         ok: true,
         operation: "init",
+      }),
+    );
+  });
+
+  it("uses default agent workspace from config when workspaceDir is not provided", async () => {
+    const gatewayHandlers = new Map<
+      string,
+      (args: {
+        params?: unknown;
+        respond: (ok: boolean, payload?: unknown) => void;
+      }) => Promise<void>
+    >();
+    const runCommandWithTimeout = vi.fn().mockResolvedValue({
+      stdout: "No tasks found.\n",
+      stderr: "",
+      code: 0,
+      signal: null,
+      killed: false,
+    });
+    const workspaceDir = await makeWorkspaceWithBacklogMarker();
+
+    register({
+      id: "backlog",
+      name: "Backlog",
+      source: "extensions/backlog/index.ts",
+      config: {
+        agents: {
+          defaults: {
+            workspace: workspaceDir,
+          },
+        },
+      },
+      pluginConfig: {},
+      runtime: {
+        system: {
+          runCommandWithTimeout,
+        },
+      },
+      logger: {
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+        debug: () => undefined,
+      },
+      registerTool: () => undefined,
+      registerGatewayMethod: (method, handler) => {
+        gatewayHandlers.set(method, handler);
+      },
+      on: () => undefined,
+      registerHook: () => undefined,
+      registerHttpHandler: () => undefined,
+      registerHttpRoute: () => undefined,
+      registerChannel: () => undefined,
+      registerProvider: () => undefined,
+      registerCli: () => undefined,
+      registerService: () => undefined,
+      registerCommand: () => undefined,
+      resolvePath: (value: string) => value,
+    } as Parameters<typeof register>[0]);
+
+    const respond = vi.fn();
+    const listHandler = gatewayHandlers.get("backlog.task.list");
+    if (!listHandler) {
+      throw new Error("missing backlog.task.list handler");
+    }
+
+    await listHandler({
+      params: {},
+      respond,
+    });
+
+    expect(runCommandWithTimeout).toHaveBeenCalledWith(
+      ["backlog", "task", "list", "--plain"],
+      expect.objectContaining({
+        cwd: workspaceDir,
+      }),
+    );
+    expect(respond).toHaveBeenCalledWith(
+      true,
+      expect.objectContaining({
+        ok: true,
+        operation: "list",
       }),
     );
   });

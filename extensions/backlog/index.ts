@@ -53,11 +53,19 @@ function asPositiveInteger(value: unknown): number | undefined {
   return value;
 }
 
+function resolveDefaultAgentWorkspaceDir(config: unknown): string | undefined {
+  const configRecord = asRecord(config);
+  const agentsRecord = asRecord(configRecord.agents);
+  const defaultsRecord = asRecord(agentsRecord.defaults);
+  return asTrimmedString(defaultsRecord.workspace);
+}
+
 function buildGatewayContext(
   api: OpenClawPluginApi,
   params: Record<string, unknown>,
 ): OpenClawPluginToolContext {
-  const workspaceDir = asTrimmedString(params.workspaceDir);
+  const workspaceDir =
+    asTrimmedString(params.workspaceDir) ?? resolveDefaultAgentWorkspaceDir(api.config);
   const agentDir =
     asTrimmedString(params.agentDir) ??
     asTrimmedString(params.cwd) ??

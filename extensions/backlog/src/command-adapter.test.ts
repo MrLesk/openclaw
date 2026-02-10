@@ -166,13 +166,22 @@ describe("executeBacklogTaskOperation", () => {
   });
 
   it("allows init operation without an existing Backlog.md root", async () => {
-    const runCommandWithTimeout = vi.fn<RunCommandWithTimeout>().mockResolvedValue({
-      stdout: "Initialized backlog project: Roadmap\n",
-      stderr: "",
-      code: 0,
-      signal: null,
-      killed: false,
-    });
+    const runCommandWithTimeout = vi
+      .fn<RunCommandWithTimeout>()
+      .mockResolvedValueOnce({
+        stdout: "Initialized empty Git repository in /tmp/workspace/.git/\n",
+        stderr: "",
+        code: 0,
+        signal: null,
+        killed: false,
+      })
+      .mockResolvedValueOnce({
+        stdout: "Initialized backlog project: Roadmap\n",
+        stderr: "",
+        code: 0,
+        signal: null,
+        killed: false,
+      });
 
     const result = await executeBacklogTaskOperation({
       operation: "init",
@@ -194,12 +203,47 @@ describe("executeBacklogTaskOperation", () => {
       "none",
     ]);
     expect(result.context.rootDir).toBe("/tmp/workspace");
-    expect(runCommandWithTimeout).toHaveBeenCalledWith(
+    expect(runCommandWithTimeout).toHaveBeenNthCalledWith(1, ["git", "init"], {
+      cwd: "/tmp/workspace",
+      timeoutMs: 30_000,
+    });
+    expect(runCommandWithTimeout).toHaveBeenNthCalledWith(
+      2,
       ["backlog", "init", "Roadmap", "--integration-mode", "none"],
       {
         cwd: "/tmp/workspace",
         timeoutMs: 30_000,
       },
     );
+  });
+
+  it("fails init when git init fails in target workspace", async () => {
+    const runCommandWithTimeout = vi.fn<RunCommandWithTimeout>().mockResolvedValueOnce({
+      stdout: "",
+      stderr: "git: command not found",
+      code: 127,
+      signal: null,
+      killed: false,
+    });
+
+    const result = await executeBacklogTaskOperation({
+      operation: "init",
+      args: ["Roadmap", "--integration-mode", "none"],
+      workspaceDir: "/tmp/workspace",
+      runCommandWithTimeout,
+      rootResolver: async () => null,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.code).toBe("command_failed");
+    expect(result.message).toContain("git init failed");
+    expect(runCommandWithTimeout).toHaveBeenCalledTimes(1);
+    expect(runCommandWithTimeout).toHaveBeenCalledWith(["git", "init"], {
+      cwd: "/tmp/workspace",
+      timeoutMs: 30_000,
+    });
   });
 });
