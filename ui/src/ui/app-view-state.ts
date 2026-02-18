@@ -3,6 +3,7 @@ import type { CompactionStatus, FallbackStatus } from "./app-tool-stream.ts";
 import type { DevicePairingList } from "./controllers/devices.ts";
 import type { ExecApprovalRequest } from "./controllers/exec-approval.ts";
 import type { ExecApprovalsFile, ExecApprovalsSnapshot } from "./controllers/exec-approvals.ts";
+import type { ControlUiPluginNavPage } from "./controllers/plugin-pages.ts";
 import type { SkillMessage } from "./controllers/skills.ts";
 import type { GatewayBrowserClient, GatewayHelloOk } from "./gateway.ts";
 import type { Tab } from "./navigation.ts";
@@ -105,6 +106,9 @@ export type AppViewState = {
   configSchema: unknown;
   configSchemaVersion: string | null;
   configSchemaLoading: boolean;
+  pluginPagesLoading: boolean;
+  pluginPagesError: string | null;
+  pluginPages: ControlUiPluginNavPage[];
   configUiHints: ConfigUiHints;
   configForm: Record<string, unknown> | null;
   configFormOriginal: Record<string, unknown> | null;

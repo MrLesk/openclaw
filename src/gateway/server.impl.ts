@@ -612,6 +612,7 @@ export async function startGatewayServer(
       removeChatRun,
       registerToolEventRecipient: toolEventRecipients.add,
       dedupe,
+      pluginRegistry,
       wizardSessions,
       findRunningWizard,
       purgeWizardSession,

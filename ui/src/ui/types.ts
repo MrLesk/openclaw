@@ -303,6 +303,20 @@ export type ConfigSchemaResponse = {
   generatedAt: string;
 };
 
+export type ControlUiPluginPage = {
+  pluginId: string;
+  pluginName: string;
+  pluginVersion?: string;
+  id: string;
+  title: string;
+  subtitle?: string;
+  route: string;
+};
+
+export type ControlUiPluginPagesResult = {
+  pages: ControlUiPluginPage[];
+};
+
 export type PresenceEntry = {
   instanceId?: string | null;
   host?: string | null;

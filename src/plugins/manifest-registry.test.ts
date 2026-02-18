@@ -167,4 +167,48 @@ describe("loadPluginManifestRegistry", () => {
     expect(registry.plugins.length).toBe(1);
     expect(registry.plugins[0]?.origin).toBe("config");
   });
+
+  it("loads normalized control UI page metadata from manifests", () => {
+    const dir = makeTempDir();
+    writeManifest(dir, {
+      id: "ui-pages",
+      configSchema: { type: "object" },
+      controlUiPages: [
+        {
+          id: "overview",
+          title: "Overview",
+          route: "/extensions/ui-pages/overview",
+          subtitle: "Live status",
+        },
+        {
+          id: "overview",
+          title: "Duplicate",
+          route: "/duplicate",
+        },
+        {
+          id: "invalid id with spaces",
+          title: "Invalid",
+          route: "/invalid",
+        },
+      ],
+    });
+
+    const registry = loadRegistry([
+      createPluginCandidate({
+        idHint: "ui-pages",
+        rootDir: dir,
+        origin: "workspace",
+      }),
+    ]);
+
+    expect(registry.plugins).toHaveLength(1);
+    expect(registry.plugins[0]?.controlUiPages).toEqual([
+      {
+        id: "overview",
+        title: "Overview",
+        route: "/extensions/ui-pages/overview",
+        subtitle: "Live status",
+      },
+    ]);
+  });
 });

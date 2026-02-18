@@ -3,6 +3,7 @@ import type { createDefaultDeps } from "../../cli/deps.js";
 import type { HealthSummary } from "../../commands/health.js";
 import type { CronService } from "../../cron/service.js";
 import type { createSubsystemLogger } from "../../logging/subsystem.js";
+import type { PluginRegistry } from "../../plugins/registry.js";
 import type { WizardSession } from "../../wizard/session.js";
 import type { ChatAbortControllerEntry } from "../chat-abort.js";
 import type { ExecApprovalManager } from "../exec-approval-manager.js";
@@ -61,6 +62,7 @@ export type GatewayRequestContext = {
   ) => { sessionKey: string; clientRunId: string } | undefined;
   registerToolEventRecipient: (runId: string, connId: string) => void;
   dedupe: Map<string, DedupeEntry>;
+  pluginRegistry?: PluginRegistry;
   wizardSessions: Map<string, WizardSession>;
   findRunningWizard: () => string | null;
   purgeWizardSession: (id: string) => void;

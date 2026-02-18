@@ -56,6 +56,7 @@ import { loadAssistantIdentity as loadAssistantIdentityInternal } from "./contro
 import type { DevicePairingList } from "./controllers/devices.ts";
 import type { ExecApprovalRequest } from "./controllers/exec-approval.ts";
 import type { ExecApprovalsFile, ExecApprovalsSnapshot } from "./controllers/exec-approvals.ts";
+import type { ControlUiPluginNavPage } from "./controllers/plugin-pages.ts";
 import type { SkillMessage } from "./controllers/skills.ts";
 import type { GatewayBrowserClient, GatewayHelloOk } from "./gateway.ts";
 import type { Tab } from "./navigation.ts";
@@ -186,6 +187,9 @@ export class OpenClawApp extends LitElement {
   @state() configSchema: unknown = null;
   @state() configSchemaVersion: string | null = null;
   @state() configSchemaLoading = false;
+  @state() pluginPagesLoading = false;
+  @state() pluginPagesError: string | null = null;
+  @state() pluginPages: ControlUiPluginNavPage[] = [];
   @state() configUiHints: ConfigUiHints = {};
   @state() configForm: Record<string, unknown> | null = null;
   @state() configFormOriginal: Record<string, unknown> | null = null;

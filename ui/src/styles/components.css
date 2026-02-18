@@ -3435,3 +3435,25 @@
     display: flex;
   }
 }
+
+.plugin-page-shell {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  box-shadow:
+    var(--shadow-sm),
+    inset 0 1px 0 var(--card-highlight);
+  min-height: 70vh;
+  overflow: hidden;
+}
+
+.plugin-page-frame {
+  width: 100%;
+  min-height: 70vh;
+  border: 0;
+  background: var(--bg);
+}
+
+.plugin-page-card {
+  max-width: 640px;
+}

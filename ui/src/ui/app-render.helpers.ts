@@ -6,6 +6,7 @@ import { syncUrlWithSessionKey } from "./app-settings.ts";
 import type { AppViewState } from "./app-view-state.ts";
 import { OpenClawApp } from "./app.ts";
 import { ChatState, loadChatHistory } from "./controllers/chat.ts";
+import type { ControlUiPluginNavPage } from "./controllers/plugin-pages.ts";
 import { icons } from "./icons.ts";
 import { iconForTab, pathForTab, titleForTab, type Tab } from "./navigation.ts";
 import type { ThemeTransitionContext } from "./theme-transition.ts";
@@ -47,10 +48,11 @@ function resetChatStateForSessionSwitch(state: AppViewState, sessionKey: string)
   });
 }
 
-export function renderTab(state: AppViewState, tab: Tab) {
+export function renderTab(state: AppViewState, tab: Tab, pluginPages: ControlUiPluginNavPage[]) {
   const href = pathForTab(tab, state.basePath);
   const isActive = state.tab === tab;
   const collapsed = state.settings.navCollapsed;
+  const title = titleForTab(tab, pluginPages);
   return html`
     <a
       href=${href}
@@ -76,10 +78,10 @@ export function renderTab(state: AppViewState, tab: Tab) {
         }
         state.setTab(tab);
       }}
-      title=${titleForTab(tab)}
+      title=${title}
     >
       <span class="nav-item__icon" aria-hidden="true">${icons[iconForTab(tab)]}</span>
-      ${!collapsed ? html`<span class="nav-item__text">${titleForTab(tab)}</span>` : nothing}
+      ${!collapsed ? html`<span class="nav-item__text">${title}</span>` : nothing}
     </a>
   `;
 }

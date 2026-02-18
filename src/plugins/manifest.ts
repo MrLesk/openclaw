@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+import type { PluginConfigUiHint, PluginControlUiPageDefinition, PluginKind } from "./types.js";
 import { MANIFEST_KEY } from "../compat/legacy-names.js";
 import { isRecord } from "../utils.js";
-import type { PluginConfigUiHint, PluginKind } from "./types.js";
 
 export const PLUGIN_MANIFEST_FILENAME = "openclaw.plugin.json";
 export const PLUGIN_MANIFEST_FILENAMES = [PLUGIN_MANIFEST_FILENAME] as const;
@@ -18,6 +18,7 @@ export type PluginManifest = {
   description?: string;
   version?: string;
   uiHints?: Record<string, PluginConfigUiHint>;
+  controlUiPages?: PluginControlUiPageDefinition[];
 };
 
 export type PluginManifestLoadResult =
@@ -29,6 +30,66 @@ function normalizeStringList(value: unknown): string[] {
     return [];
   }
   return value.map((entry) => (typeof entry === "string" ? entry.trim() : "")).filter(Boolean);
+}
+
+function normalizeControlUiPageId(value: unknown): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+  return /^[a-zA-Z0-9._-]+$/.test(trimmed) ? trimmed : "";
+}
+
+function normalizeControlUiPageRoute(value: unknown): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+}
+
+function normalizeControlUiPages(value: unknown): PluginControlUiPageDefinition[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const pages: PluginControlUiPageDefinition[] = [];
+  const seenIds = new Set<string>();
+  for (const entry of value) {
+    if (!isRecord(entry)) {
+      continue;
+    }
+    const id = normalizeControlUiPageId(entry.id);
+    if (!id) {
+      continue;
+    }
+    const dedupeKey = id.toLowerCase();
+    if (seenIds.has(dedupeKey)) {
+      continue;
+    }
+    const title = typeof entry.title === "string" ? entry.title.trim() : "";
+    const route = normalizeControlUiPageRoute(entry.route);
+    if (!title || !route) {
+      continue;
+    }
+    const subtitle =
+      typeof entry.subtitle === "string" && entry.subtitle.trim()
+        ? entry.subtitle.trim()
+        : undefined;
+    pages.push({
+      id,
+      title,
+      route,
+      subtitle,
+    });
+    seenIds.add(dedupeKey);
+  }
+  return pages;
 }
 
 export function resolvePluginManifestPath(rootDir: string): string {
@@ -75,6 +136,7 @@ export function loadPluginManifest(rootDir: string): PluginManifestLoadResult {
   const channels = normalizeStringList(raw.channels);
   const providers = normalizeStringList(raw.providers);
   const skills = normalizeStringList(raw.skills);
+  const controlUiPages = normalizeControlUiPages(raw.controlUiPages);
 
   let uiHints: Record<string, PluginConfigUiHint> | undefined;
   if (isRecord(raw.uiHints)) {
@@ -94,6 +156,7 @@ export function loadPluginManifest(rootDir: string): PluginManifestLoadResult {
       description,
       version,
       uiHints,
+      controlUiPages,
     },
     manifestPath,
   };

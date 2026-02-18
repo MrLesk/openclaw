@@ -1,7 +1,7 @@
-import { t } from "../i18n/index.ts";
 import type { IconName } from "./icons.js";
+import { t } from "../i18n/index.ts";
 
-export const TAB_GROUPS = [
+export const CORE_TAB_GROUPS = [
   { label: "chat", tabs: ["chat"] },
   {
     label: "control",
@@ -11,7 +11,9 @@ export const TAB_GROUPS = [
   { label: "settings", tabs: ["config", "debug", "logs"] },
 ] as const;
 
-export type Tab =
+export const TAB_GROUPS = CORE_TAB_GROUPS;
+
+export type CoreTab =
   | "agents"
   | "overview"
   | "channels"
@@ -26,7 +28,20 @@ export type Tab =
   | "debug"
   | "logs";
 
-const TAB_PATHS: Record<Tab, string> = {
+export type PluginTab = `plugin:${string}/${string}`;
+
+export type Tab = CoreTab | PluginTab;
+
+export type PluginNavPage = {
+  tab: PluginTab;
+  pluginId: string;
+  pageId: string;
+  title: string;
+  subtitle?: string;
+  route: string;
+};
+
+const CORE_TAB_PATHS: Record<CoreTab, string> = {
   agents: "/agents",
   overview: "/overview",
   channels: "/channels",
@@ -42,7 +57,101 @@ const TAB_PATHS: Record<Tab, string> = {
   logs: "/logs",
 };
 
-const PATH_TO_TAB = new Map(Object.entries(TAB_PATHS).map(([tab, path]) => [path, tab as Tab]));
+const CORE_PATH_TO_TAB = new Map(
+  Object.entries(CORE_TAB_PATHS).map(([tab, path]) => [path, tab as CoreTab]),
+);
+const PLUGIN_TAB_PREFIX = "plugin:";
+const PLUGIN_TAB_PATH_PREFIX = "/plugins/";
+
+function decodeSegment(value: string): string | null {
+  if (!value) {
+    return null;
+  }
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
+
+function encodeSegment(value: string): string {
+  return encodeURIComponent(value);
+}
+
+export function buildPluginTab(pluginId: string, pageId: string): PluginTab | null {
+  const normalizedPluginId = pluginId.trim();
+  const normalizedPageId = pageId.trim();
+  if (!normalizedPluginId || !normalizedPageId) {
+    return null;
+  }
+  return `${PLUGIN_TAB_PREFIX}${encodeSegment(normalizedPluginId)}/${encodeSegment(normalizedPageId)}`;
+}
+
+export function isPluginTab(tab: Tab): tab is PluginTab {
+  return tab.startsWith(PLUGIN_TAB_PREFIX);
+}
+
+export function parsePluginTab(tab: Tab): { pluginId: string; pageId: string } | null {
+  if (!isPluginTab(tab)) {
+    return null;
+  }
+  const encoded = tab.slice(PLUGIN_TAB_PREFIX.length);
+  const split = encoded.indexOf("/");
+  if (split <= 0 || split === encoded.length - 1) {
+    return null;
+  }
+  const pluginId = decodeSegment(encoded.slice(0, split));
+  const pageId = decodeSegment(encoded.slice(split + 1));
+  if (!pluginId || !pageId) {
+    return null;
+  }
+  return { pluginId, pageId };
+}
+
+function pluginTabPath(tab: PluginTab): string | null {
+  const parsed = parsePluginTab(tab);
+  if (!parsed) {
+    return null;
+  }
+  return `${PLUGIN_TAB_PATH_PREFIX}${encodeSegment(parsed.pluginId)}/${encodeSegment(parsed.pageId)}`;
+}
+
+function pluginTabFromPath(pathname: string): PluginTab | null {
+  if (!pathname.startsWith(PLUGIN_TAB_PATH_PREFIX)) {
+    return null;
+  }
+  const suffix = pathname.slice(PLUGIN_TAB_PATH_PREFIX.length);
+  const firstSlash = suffix.indexOf("/");
+  if (firstSlash <= 0 || firstSlash === suffix.length - 1) {
+    return null;
+  }
+  const pluginId = decodeSegment(suffix.slice(0, firstSlash));
+  const pageId = decodeSegment(suffix.slice(firstSlash + 1));
+  if (!pluginId || !pageId) {
+    return null;
+  }
+  return buildPluginTab(pluginId, pageId);
+}
+
+export function resolveTabGroups(
+  pluginPages: PluginNavPage[],
+): Array<{ label: string; tabs: Tab[] }> {
+  const groups: Array<{ label: string; tabs: Tab[] }> = CORE_TAB_GROUPS.map((group) => ({
+    label: group.label,
+    tabs: [...group.tabs],
+  }));
+  if (pluginPages.length > 0) {
+    groups.push({
+      label: "extensions",
+      tabs: pluginPages.map((page) => page.tab),
+    });
+  }
+  return groups;
+}
+
+function findPluginPage(tab: PluginTab, pluginPages: PluginNavPage[]): PluginNavPage | undefined {
+  return pluginPages.find((entry) => entry.tab === tab);
+}
 
 export function normalizeBasePath(basePath: string): string {
   if (!basePath) {
@@ -77,7 +186,10 @@ export function normalizePath(path: string): string {
 
 export function pathForTab(tab: Tab, basePath = ""): string {
   const base = normalizeBasePath(basePath);
-  const path = TAB_PATHS[tab];
+  const path = isPluginTab(tab) ? pluginTabPath(tab) : CORE_TAB_PATHS[tab];
+  if (!path) {
+    return base || "/";
+  }
   return base ? `${base}${path}` : path;
 }
 
@@ -98,7 +210,7 @@ export function tabFromPath(pathname: string, basePath = ""): Tab | null {
   if (normalized === "/") {
     return "chat";
   }
-  return PATH_TO_TAB.get(normalized) ?? null;
+  return CORE_PATH_TO_TAB.get(normalized) ?? pluginTabFromPath(normalized) ?? null;
 }
 
 export function inferBasePathFromPathname(pathname: string): string {
@@ -115,7 +227,7 @@ export function inferBasePathFromPathname(pathname: string): string {
   }
   for (let i = 0; i < segments.length; i++) {
     const candidate = `/${segments.slice(i).join("/")}`.toLowerCase();
-    if (PATH_TO_TAB.has(candidate)) {
+    if (CORE_PATH_TO_TAB.has(candidate) || pluginTabFromPath(candidate)) {
       const prefix = segments.slice(0, i);
       return prefix.length ? `/${prefix.join("/")}` : "";
     }
@@ -124,6 +236,9 @@ export function inferBasePathFromPathname(pathname: string): string {
 }
 
 export function iconForTab(tab: Tab): IconName {
+  if (isPluginTab(tab)) {
+    return "puzzle";
+  }
   switch (tab) {
     case "agents":
       return "folder";
@@ -156,10 +271,16 @@ export function iconForTab(tab: Tab): IconName {
   }
 }
 
-export function titleForTab(tab: Tab) {
+export function titleForTab(tab: Tab, pluginPages: PluginNavPage[] = []) {
+  if (isPluginTab(tab)) {
+    return findPluginPage(tab, pluginPages)?.title ?? t("tabs.plugin");
+  }
   return t(`tabs.${tab}`);
 }
 
-export function subtitleForTab(tab: Tab) {
+export function subtitleForTab(tab: Tab, pluginPages: PluginNavPage[] = []) {
+  if (isPluginTab(tab)) {
+    return findPluginPage(tab, pluginPages)?.subtitle ?? t("subtitles.plugin");
+  }
   return t(`subtitles.${tab}`);
 }

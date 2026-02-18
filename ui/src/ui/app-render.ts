@@ -62,7 +62,13 @@ import {
 } from "./controllers/skills.ts";
 import "./components/dashboard-header.ts";
 import { icons } from "./icons.ts";
-import { normalizeBasePath, TAB_GROUPS, subtitleForTab, titleForTab } from "./navigation.ts";
+import {
+  isPluginTab,
+  normalizeBasePath,
+  resolveTabGroups,
+  subtitleForTab,
+  titleForTab,
+} from "./navigation.ts";
 import { renderAgents } from "./views/agents.ts";
 import { renderChannels } from "./views/channels.ts";
 import { renderChat } from "./views/chat.ts";
@@ -77,6 +83,7 @@ import { renderLoginGate } from "./views/login-gate.ts";
 import { renderLogs } from "./views/logs.ts";
 import { renderNodes } from "./views/nodes.ts";
 import { renderOverview } from "./views/overview.ts";
+import { renderPluginPage } from "./views/plugin-page.ts";
 import { renderSessions } from "./views/sessions.ts";
 import { renderSkills } from "./views/skills.ts";
 
@@ -148,6 +155,7 @@ export function renderApp(state: AppViewState) {
   const configValue =
     state.configForm ?? (state.configSnapshot?.config as Record<string, unknown> | null);
   const basePath = normalizeBasePath(state.basePath ?? "");
+  const tabGroups = resolveTabGroups(state.pluginPages);
   const resolvedAgentId =
     state.agentsSelectedId ??
     state.agentsList?.defaultId ??
@@ -231,7 +239,7 @@ export function renderApp(state: AppViewState) {
  
           
           <nav class="sidebar-nav">
-          ${TAB_GROUPS.map((group) => {
+          ${tabGroups.map((group) => {
             const isGroupCollapsed = state.settings.navGroupsCollapsed[group.label] ?? false;
             const hasActiveTab = group.tabs.some((tab) => tab === state.tab);
             const showItems = hasActiveTab || !isGroupCollapsed;
@@ -260,7 +268,7 @@ export function renderApp(state: AppViewState) {
                     : nothing
                 }
                 <div class="nav-group__items">
-                  ${group.tabs.map((tab) => renderTab(state, tab))}
+                  ${group.tabs.map((tab) => renderTab(state, tab, state.pluginPages))}
                 </div>
               </div>
             `;
@@ -344,9 +352,13 @@ export function renderApp(state: AppViewState) {
                 ? renderChatSessionSelect(state)
                 : state.tab === "skills"
                   ? nothing
-                  : html`<div class="page-title">${titleForTab(state.tab)}</div>`
+                  : html`<div class="page-title">${titleForTab(state.tab, state.pluginPages)}</div>`
             }
-            ${isChat || state.tab === "skills" ? nothing : html`<div class="page-sub">${subtitleForTab(state.tab)}</div>`}
+            ${
+              isChat || state.tab === "skills"
+                ? nothing
+                : html`<div class="page-sub">${subtitleForTab(state.tab, state.pluginPages)}</div>`
+            }
           </div>
           <div class="page-meta">
             ${state.lastError ? html`<div class="pill danger">${state.lastError}</div>` : nothing}
@@ -1119,6 +1131,17 @@ export function renderApp(state: AppViewState) {
                 assistantName: state.assistantName,
                 assistantAvatar: state.assistantAvatar,
                 basePath: state.basePath ?? "",
+              })
+            : nothing
+        }
+
+        ${
+          isPluginTab(state.tab)
+            ? renderPluginPage({
+                tab: state.tab,
+                loading: state.pluginPagesLoading,
+                error: state.pluginPagesError,
+                pages: state.pluginPages,
               })
             : nothing
         }

@@ -26,6 +26,7 @@ import {
 } from "./controllers/exec-approval.ts";
 import { loadHealthState } from "./controllers/health.ts";
 import { loadNodes } from "./controllers/nodes.ts";
+import { loadPluginPages, type ControlUiPluginNavPage } from "./controllers/plugin-pages.ts";
 import { loadSessions } from "./controllers/sessions.ts";
 import type { GatewayEventFrame, GatewayHelloOk } from "./gateway.ts";
 import { GatewayBrowserClient } from "./gateway.ts";
@@ -50,9 +51,13 @@ type GatewayHost = {
   eventLogBuffer: EventLogEntry[];
   eventLog: EventLogEntry[];
   tab: Tab;
+  setTab: (tab: Tab) => void;
   presenceEntries: PresenceEntry[];
   presenceError: string | null;
   presenceStatus: StatusSummary | null;
+  pluginPagesLoading: boolean;
+  pluginPagesError: string | null;
+  pluginPages: ControlUiPluginNavPage[];
   agentsLoading: boolean;
   agentsList: AgentsListResult | null;
   agentsError: string | null;
@@ -163,6 +168,7 @@ export function connectGateway(host: GatewayHost) {
       void loadHealthState(host as unknown as OpenClawApp);
       void loadNodes(host as unknown as OpenClawApp, { quiet: true });
       void loadDevices(host as unknown as OpenClawApp, { quiet: true });
+      void loadPluginPages(host as unknown as Parameters<typeof loadPluginPages>[0]);
       void refreshActiveTab(host as unknown as Parameters<typeof refreshActiveTab>[0]);
     },
     onClose: ({ code, reason }) => {

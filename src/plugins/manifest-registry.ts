@@ -5,7 +5,13 @@ import { normalizePluginsConfig, type NormalizedPluginsConfig } from "./config-s
 import { discoverOpenClawPlugins, type PluginCandidate } from "./discovery.js";
 import { loadPluginManifest, type PluginManifest } from "./manifest.js";
 import { safeRealpathSync } from "./path-safety.js";
-import type { PluginConfigUiHint, PluginDiagnostic, PluginKind, PluginOrigin } from "./types.js";
+import type {
+  PluginConfigUiHint,
+  PluginControlUiPageDefinition,
+  PluginDiagnostic,
+  PluginKind,
+  PluginOrigin,
+} from "./types.js";
 
 type SeenIdEntry = {
   candidate: PluginCandidate;
@@ -37,6 +43,7 @@ export type PluginManifestRecord = {
   schemaCacheKey?: string;
   configSchema?: Record<string, unknown>;
   configUiHints?: Record<string, PluginConfigUiHint>;
+  controlUiPages?: PluginControlUiPageDefinition[];
 };
 
 export type PluginManifestRegistry = {
@@ -128,6 +135,7 @@ function buildRecord(params: {
     schemaCacheKey: params.schemaCacheKey,
     configSchema: params.configSchema,
     configUiHints: params.manifest.uiHints,
+    controlUiPages: params.manifest.controlUiPages,
   };
 }
 
