@@ -3,6 +3,14 @@
   "name": "Backlog.md",
   "description": "Backlog.md integration extension for OpenClaw.",
   "skills": ["./skills"],
+  "controlUiPages": [
+    {
+      "id": "tasks",
+      "title": "Tasks",
+      "subtitle": "Backlog.md project board",
+      "route": "/plugins/backlog/tasks"
+    }
+  ],
   "configSchema": {
     "type": "object",
     "additionalProperties": false,

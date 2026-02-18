@@ -51,9 +51,6 @@ RUN pnpm ui:build
 
 ENV NODE_ENV=production
 
-# Backlog.md CLI is required by the bundled Backlog.md plugin tools.
-RUN npm install -g backlog.md@latest && backlog --version
-
 # Allow non-root user to write temp files during runtime/tests.
 RUN chown -R node:node /app
 
@@ -68,4 +65,4 @@ USER node
 # For container platforms requiring external health checks:
 #   1. Set OPENCLAW_GATEWAY_TOKEN or OPENCLAW_GATEWAY_PASSWORD env var
 #   2. Override CMD: ["node","openclaw.mjs","gateway","--allow-unconfigured","--bind","lan"]
-CMD ["node", "dist/index.js", "gateway", "--allow-unconfigured", "--bind", "lan", "--port", "18789"]
+CMD ["node", "openclaw.mjs", "gateway", "--allow-unconfigured"]

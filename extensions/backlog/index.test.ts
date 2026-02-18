@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import register from "./index.js";
+import { BACKLOG_CONTROL_UI_ROUTE } from "./src/control-ui.js";
 
 const tempDirs: string[] = [];
 
@@ -299,5 +300,70 @@ describe("backlog plugin gateway methods", () => {
         operation: "list",
       }),
     );
+  });
+
+  it("registers backlog control ui route", async () => {
+    const routes = new Map<
+      string,
+      (
+        req: unknown,
+        res: {
+          statusCode: number;
+          setHeader: (name: string, value: string) => void;
+          end: (body: string) => void;
+        },
+      ) => void
+    >();
+    const setHeader = vi.fn();
+    const end = vi.fn();
+    register({
+      id: "backlog",
+      name: "Backlog",
+      source: "extensions/backlog/index.ts",
+      config: {},
+      pluginConfig: {},
+      runtime: {
+        system: {
+          runCommandWithTimeout: vi.fn(),
+        },
+      },
+      logger: {
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+        debug: () => undefined,
+      },
+      registerTool: () => undefined,
+      registerGatewayMethod: () => undefined,
+      on: () => undefined,
+      registerHook: () => undefined,
+      registerHttpHandler: () => undefined,
+      registerHttpRoute: ({ path, handler }) => {
+        routes.set(path, handler);
+      },
+      registerChannel: () => undefined,
+      registerProvider: () => undefined,
+      registerCli: () => undefined,
+      registerService: () => undefined,
+      registerCommand: () => undefined,
+      resolvePath: (value: string) => value,
+    } as Parameters<typeof register>[0]);
+
+    const route = routes.get(BACKLOG_CONTROL_UI_ROUTE);
+    expect(route).toBeDefined();
+    if (!route) {
+      throw new Error("missing backlog control ui route");
+    }
+    const response = {
+      statusCode: 0,
+      setHeader,
+      end,
+    };
+    route({}, response);
+
+    expect(response.statusCode).toBe(200);
+    expect(setHeader).toHaveBeenCalledWith("Content-Type", "text/html; charset=utf-8");
+    expect(end).toHaveBeenCalledTimes(1);
+    expect(String(end.mock.calls[0]?.[0] ?? "")).toContain("Backlog Tasks");
   });
 });

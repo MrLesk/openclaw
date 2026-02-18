@@ -1,5 +1,6 @@
 import type { OpenClawPluginApi, OpenClawPluginToolContext } from "openclaw/plugin-sdk";
 import { executeBacklogTaskOperation } from "./src/command-adapter.js";
+import { BACKLOG_CONTROL_UI_ROUTE, renderBacklogControlUiHtml } from "./src/control-ui.js";
 import { BACKLOG_TASK_TOOL_NAMES, createBacklogTaskTools } from "./src/task-tools.js";
 
 const BACKLOG_WORKFLOW_NUDGE = [
@@ -244,6 +245,15 @@ export default function register(api: OpenClawPluginApi) {
         context: result.context ?? null,
       },
     });
+  });
+
+  api.registerHttpRoute({
+    path: BACKLOG_CONTROL_UI_ROUTE,
+    handler: (_req, res) => {
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.end(renderBacklogControlUiHtml());
+    },
   });
 
   api.on("before_agent_start", () => ({

@@ -196,10 +196,6 @@
           - "docs/cli/security.md"
           - "docs/gateway/security.md"
 
-"extensions: backlog":
-  - changed-files:
-      - any-glob-to-any-file:
-          - "extensions/backlog/**"
 "extensions: copilot-proxy":
   - changed-files:
       - any-glob-to-any-file:
