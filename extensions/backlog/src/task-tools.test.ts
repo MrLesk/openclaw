@@ -119,6 +119,7 @@ describe("backlog task tools read JSON mode", () => {
       title: "Build tasks UI",
       status: "To Do",
       priority: "high",
+      progress: 0,
     });
   });
 
@@ -197,6 +198,7 @@ Keep read-only.
       { checked: true, text: "Nav shows tasks" },
       { checked: false, text: "Popup works" },
     ]);
+    expect(task.progress).toBe(50);
     expect(task.implementationPlan).toContain("Implement list + popup");
   });
 

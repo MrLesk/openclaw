@@ -45,6 +45,7 @@ type BacklogTaskSummary = {
   priority: (typeof PRIORITY_VALUES)[number] | null;
   createdDate: string | null;
   lastModified: string | null;
+  progress: number;
 };
 
 type BacklogTaskSearchSummary = BacklogTaskSummary & {
@@ -407,6 +408,22 @@ function parseChecklistItems(
   return { ok: true, data: items };
 }
 
+function computeTaskProgressPercent(params: {
+  acceptanceCriteria: BacklogChecklistItem[];
+  definitionOfDone: BacklogChecklistItem[];
+}): number {
+  const total = params.acceptanceCriteria.length + params.definitionOfDone.length;
+  if (total === 0) {
+    return 0;
+  }
+  const checked =
+    params.acceptanceCriteria.filter((item) => item.checked).length +
+    params.definitionOfDone.filter((item) => item.checked).length;
+  const ratio = checked / total;
+  const percent = Math.round(ratio * 100);
+  return Math.max(0, Math.min(100, percent));
+}
+
 function parseListStdout(stdout: string): ParseResult<{ tasks: BacklogTaskSummary[] }> {
   const tasks: BacklogTaskSummary[] = [];
   const lines = stdout.replaceAll("\r\n", "\n").split("\n");
@@ -439,6 +456,7 @@ function parseListStdout(stdout: string): ParseResult<{ tasks: BacklogTaskSummar
       priority: normalizePriority(rowMatch[1]),
       createdDate: null,
       lastModified: null,
+      progress: 0,
     });
   }
 
@@ -475,6 +493,7 @@ function parseSearchStdout(stdout: string): ParseResult<{ tasks: BacklogTaskSear
       score: Number.parseFloat(rowMatch[5]),
       createdDate: null,
       lastModified: null,
+      progress: 0,
     });
   }
 
@@ -713,6 +732,10 @@ function parseViewStdout(stdout: string): ParseResult<{ task: BacklogTaskDetails
   if (!parsedDefinitionOfDone.ok) {
     return parsedDefinitionOfDone;
   }
+  const progress = computeTaskProgressPercent({
+    acceptanceCriteria: parsedAcceptanceCriteria.data,
+    definitionOfDone: parsedDefinitionOfDone.data,
+  });
 
   return {
     ok: true,
@@ -738,6 +761,7 @@ function parseViewStdout(stdout: string): ParseResult<{ task: BacklogTaskDetails
         implementationPlan,
         implementationNotes,
         finalSummary,
+        progress,
       },
     },
   };
